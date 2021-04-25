@@ -25,7 +25,7 @@ namespace OcrWebApp.Controllers
         {
             if (file.Length > 0)
             {
-                filePath = Path.Combine(Directory.GetCurrentDirectory(), @"wwwroot\Upload\", file.FileName);
+                filePath = Path.Combine(Directory.GetCurrentDirectory(), @"wwwroot/Upload/", file.FileName);
 
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
@@ -34,11 +34,36 @@ namespace OcrWebApp.Controllers
             }
 
             ViewBag.Result = true;
+            //string calyObazek = CalyObrazek(filePath);
             string nazwisko = PobierzNazwisko(filePath);
             string ocenaMeczowa = PobierzOceneMeczowa(filePath);
+
+            //ViewBag.res = ocenaMeczowa;
             ViewBag.res = nazwisko + Environment.NewLine + ocenaMeczowa;
 
             return View();
+        }
+
+        private string CalyObrazek(string file)
+        {
+            IronTesseract Ocr = new IronTesseract();
+            OcrResult result;
+            Ocr.Language = OcrLanguage.Polish;
+
+            using (var Input = new OcrInput(file))
+            {
+                Input.MinimumDPI = 250;
+                Input.TargetDPI = 300;
+
+                Ocr.Configuration.TesseractVersion = TesseractVersion.Tesseract5;
+                Ocr.Configuration.EngineMode = TesseractEngineMode.TesseractOnly;
+                Ocr.Configuration.RenderSearchablePdfsAndHocr = true;
+                Ocr.Configuration.PageSegmentationMode = TesseractPageSegmentationMode.AutoOsd;
+                Ocr.Configuration.TesseractVariables["tessedit_parallelize"] = false;
+
+                result = Ocr.Read(Input);
+            }
+            return result.Text;
         }
 
         private string PobierzNazwisko(string file)
@@ -53,6 +78,7 @@ namespace OcrWebApp.Controllers
                 Input.AddImage(file, contentArea);
                 ExportBitmapArea(file, contentArea, "Nazwisko");
 
+                Ocr.Configuration.PageSegmentationMode = TesseractPageSegmentationMode.SingleBlock;
                 result = Ocr.Read(Input);
             }
             return result.Text;
@@ -65,10 +91,11 @@ namespace OcrWebApp.Controllers
 
             using (var Input = new OcrInput())
             {
-                Rectangle contentArea = new Rectangle() { X = 1130, Y = 445, Height = 90, Width = 140 };
+                Rectangle contentArea = new Rectangle() { X = 1130, Y = 450, Height = 90, Width = 140 };
                 Input.AddImage(file, contentArea);
                 ExportBitmapArea(file, contentArea, "OcenaMeczowa");
 
+                Ocr.Configuration.PageSegmentationMode = TesseractPageSegmentationMode.SingleBlock;
                 result = Ocr.Read(Input);
             }
             return result.Text;
@@ -79,7 +106,7 @@ namespace OcrWebApp.Controllers
             Bitmap original = new Bitmap(Inputfile);
             System.Drawing.Imaging.PixelFormat format = original.PixelFormat;
             Bitmap clone = original.Clone(contentArea, format);
-            clone.Save(Path.Combine(Directory.GetCurrentDirectory(), @$"wwwroot\Upload\{OutputFile}.png"));
+            clone.Save(Path.Combine(Directory.GetCurrentDirectory(), @$"wwwroot/Upload/{OutputFile}.png"));
         }
     }
 }
